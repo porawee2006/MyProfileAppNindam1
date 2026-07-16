@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { Image } from 'expo-image';
+import { useEffect, useState } from 'react';
 import {
   Dimensions,
   Platform,
@@ -14,15 +15,34 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
-const PRODUCTS = [
-  { id: '1', name: ' Anker PowerBank ', price: '$49.99', category: 'Elctronic Accessories', stock: 15 },
-  { id: '2', name: 'Apple AirTag (4-Pack)', price: '$89.99', category: 'Elctronic Accessories', stock: 8 },
-  { id: '3', name: 'Logitech MX Master 3S', price: '$99.99', category: 'Elctronic Accessoriess', stock: 2 },
-];
+type Product = {
+  id: string;
+  name: string;
+  price?: string;
+  category: string;
+  stock: number;
+  image_url: string;
+};
+
+const PRODUCTS_URL = 'https://raw.githubusercontent.com/USERNAME/REPOSITORY/main/products.json';
 
 export default function ProductsScreen() {
   const [activeTab, setActiveTab] = useState('Products');
   const [searchQuery, setSearchQuery] = useState('');
+  const [products, setProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    async function loadProducts() {
+      try {
+        const response = await fetch(PRODUCTS_URL);
+        const data = await response.json();
+        setProducts(data);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      }
+    }
+    loadProducts();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -75,10 +95,15 @@ export default function ProductsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.productList}>
-          {PRODUCTS.map((product) => (
+          {products.map((product) => (
             <View key={product.id} style={styles.productCard}>
               <View style={styles.productImagePlaceholder}>
-                <Text style={styles.productImageText}>📦</Text>
+                <Image
+                  source={{ uri: product.image_url }}
+                  style={styles.productImage}
+                  contentFit="cover"
+                  transition={1000}
+                />
               </View>
               <View style={styles.productInfo}>
                 <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
@@ -297,6 +322,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  productImage: {
+    width: '100%',
+    height: '100%',
   },
   productImageText: {
     fontSize: 32,

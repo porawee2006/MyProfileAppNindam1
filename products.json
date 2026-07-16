@@ -1,0 +1,26 @@
+[
+  {
+    "id": "1",
+    "name": "Anker PowerBank",
+    "price": "$49.99",
+    "category": "Electronic Accessories",
+    "stock": 15,
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Power_bank.jpg/640px-Power_bank.jpg"
+  },
+  {
+    "id": "2",
+    "name": "Apple AirTag (4-Pack)",
+    "price": "$89.99",
+    "category": "Electronic Accessories",
+    "stock": 8,
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Apple_AirTag.svg/1024px-Apple_AirTag.svg.png"
+  },
+  {
+    "id": "3",
+    "name": "Logitech MX Master 3S",
+    "price": "$99.99",
+    "category": "Electronic Accessories",
+    "stock": 2,
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Logitech_MX_Master_3.jpg/640px-Logitech_MX_Master_3.jpg"
+  }
+]
