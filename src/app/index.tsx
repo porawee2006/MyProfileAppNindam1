@@ -34,7 +34,11 @@ export default function ProductsScreen() {
   useEffect(() => {
     async function loadProducts() {
       try {
-        const response = await fetch(PRODUCTS_URL);
+        // เพิ่ม ?v= timestamp เพื่อป้องกันปัญหา Browser หรือ GitHub Cache ข้อมูลเก่า (เช่นตอนที่ไฟล์ยังไม่ถูก push)
+        const response = await fetch(`${PRODUCTS_URL}?v=${new Date().getTime()}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const data = await response.json();
         setProducts(data);
       } catch (error) {
