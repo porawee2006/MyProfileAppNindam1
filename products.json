@@ -5,7 +5,7 @@
     "price": "$49.99",
     "category": "Electronic Accessories",
     "stock": 15,
-    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Power_bank.jpg/640px-Power_bank.jpg"
+    "image_url": "https://th.bing.com/th/id/OIP.zvgd241j_T__c5sr7W5S2gHaJQ?r=0&o=7rm=3&rs=1&pid=ImgDetMain&o=7&rm=3"
   },
   {
     "id": "2",
@@ -13,14 +13,14 @@
     "price": "$89.99",
     "category": "Electronic Accessories",
     "stock": 8,
-    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Apple_AirTag.svg/1024px-Apple_AirTag.svg.png"
+    "image_url": "https://i5.walmartimages.com/asr/95c1cf85-d0d2-44db-bcb5-0d4260121e42.61beda6a4830060f3d74d58eb6b767c5.jpeg"
   },
   {
     "id": "3",
-    "name": "Logitech MX Master 3S",
+    "name": "Enerwow Power Bank 27000mAh",
     "price": "$99.99",
     "category": "Electronic Accessories",
     "stock": 2,
-    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Logitech_MX_Master_3.jpg/640px-Logitech_MX_Master_3.jpg"
+    "image_url": "https://tse4.mm.bing.net/th/id/OIP.cZUnn3njMYzqHQ6EEwLNPwHaHa?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"
   }
 ]

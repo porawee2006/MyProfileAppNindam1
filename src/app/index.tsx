@@ -24,25 +24,31 @@ type Product = {
   image_url: string;
 };
 
-const PRODUCTS_URL = 'https://raw.githubusercontent.com/USERNAME/REPOSITORY/main/products.json';
+const PRODUCTS_URL = 'https://raw.githubusercontent.com/porawee2006/MyProfileAppNindam1/main/products.json';
 
 export default function ProductsScreen() {
   const [activeTab, setActiveTab] = useState('Products');
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
     async function loadProducts() {
       try {
-        // เพิ่ม ?v= timestamp เพื่อป้องกันปัญหา Browser หรือ GitHub Cache ข้อมูลเก่า (เช่นตอนที่ไฟล์ยังไม่ถูก push)
-        const response = await fetch(`${PRODUCTS_URL}?v=${new Date().getTime()}`);
+        setIsLoading(true);
+        setErrorMsg('');
+        const response = await fetch(PRODUCTS_URL.replace('refs/heads/', '') + '?v=' + Date.now());
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
         setProducts(data);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching products:", error);
+        setErrorMsg(error.message || "Failed to load");
+      } finally {
+        setIsLoading(false);
       }
     }
     loadProducts();
@@ -99,6 +105,12 @@ export default function ProductsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.productList}>
+          {isLoading && <Text style={{ textAlign: 'center', marginTop: 20 }}>กำลังโหลดข้อมูล...</Text>}
+          {errorMsg ? <Text style={{ textAlign: 'center', color: 'red', marginTop: 20 }}>เกิดข้อผิดพลาด: {errorMsg}</Text> : null}
+          {!isLoading && !errorMsg && products.length === 0 && (
+            <Text style={{ textAlign: 'center', marginTop: 20 }}>ไม่พบสินค้า</Text>
+          )}
+
           {products.map((product) => (
             <View key={product.id} style={styles.productCard}>
               <View style={styles.productImagePlaceholder}>
