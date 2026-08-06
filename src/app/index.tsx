@@ -16,15 +16,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const { width } = Dimensions.get('window');
 
 type Product = {
-  id: string;
+  id: number;
   name: string;
-  price?: string;
-  category: string;
+  brand: string;
+  capacity: number;
+  price: number;
   stock: number;
-  image_url: string;
+  image: string;
 };
 
-const PRODUCTS_URL = 'https://raw.githubusercontent.com/porawee2006/MyProfileAppNindam1/main/products.json';
+const API_BASE_URL = 'http://119.59.102.161:3028/api';
+const PRODUCTS_URL = `${API_BASE_URL}/products`;
 
 export default function ProductsScreen() {
   const [activeTab, setActiveTab] = useState('Products');
@@ -38,7 +40,7 @@ export default function ProductsScreen() {
       try {
         setIsLoading(true);
         setErrorMsg('');
-        const response = await fetch(PRODUCTS_URL.replace('refs/heads/', '') + '?v=' + Date.now());
+        const response = await fetch(PRODUCTS_URL);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -115,7 +117,7 @@ export default function ProductsScreen() {
             <View key={product.id} style={styles.productCard}>
               <View style={styles.productImagePlaceholder}>
                 <Image
-                  source={{ uri: product.image_url }}
+                  source={{ uri: product.image }}
                   style={styles.productImage}
                   contentFit="cover"
                   transition={1000}
@@ -123,9 +125,9 @@ export default function ProductsScreen() {
               </View>
               <View style={styles.productInfo}>
                 <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
-                <Text style={styles.productCategory}>{product.category}</Text>
+                <Text style={styles.productCategory}>{product.brand || 'No Brand'} • {product.capacity ? `${product.capacity}mAh` : 'N/A'}</Text>
                 <View style={styles.productFooter}>
-                  <Text style={styles.productPrice}>{product.price}</Text>
+                  <Text style={styles.productPrice}>{product.price ? `$${product.price}` : 'Free'}</Text>
                   <View style={[styles.stockBadge, product.stock < 10 ? styles.stockLow : styles.stockNormal]}>
                     <Text style={[styles.stockText, product.stock < 10 ? styles.stockTextLow : styles.stockTextNormal]}>
                       {product.stock} left
