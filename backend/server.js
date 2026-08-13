@@ -58,6 +58,65 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
+// Add product
+app.post('/api/products', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const { name, brand = null, capacity = null, price = 0, stock = 0, image = null, category = null, location = null, status = 'Active' } = body;
+
+    if (!name) return res.status(400).json({ error: 'Name is required' });
+
+    try {
+      // First try the schema from the presentation
+      const [rs] = await pool.query(
+        `INSERT INTO powerbanks (name, stock, category, location, image, status, brand, lastUpdate) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [name, stock || 0, category || null, location || null, image || null, status || 'Active', brand || null]
+      );
+      return res.status(201).json({ success: true, productId: rs.insertId });
+    } catch(e) {
+      // Fallback to powerbanks schema derived from index.tsx
+      const [rs2] = await pool.query(
+        `INSERT INTO powerbanks (name, brand, capacity, price, stock, image) VALUES (?, ?, ?, ?, ?, ?)`,
+        [name, brand, capacity, price, stock, image]
+      );
+      return res.status(201).json({ success: true, productId: rs2.insertId });
+    }
+  } catch (err) {
+    console.error('Create Product Error:', err);
+    res.status(500).json({ error: 'Failed to create product' });
+  }
+});
+
+// Edit product
+app.put('/api/products/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const body = req.body || {};
+    const { name, brand = null, capacity = null, price = 0, stock = 0, image = null, category = null, location = null, status = 'Active' } = body;
+
+    if (!name) return res.status(400).json({ error: 'Missing name' });
+
+    try {
+       const [result] = await pool.query(
+        `UPDATE powerbanks SET name = ?, stock = ?, category = ?, location = ?, status = ?, image = ?, brand = ?, lastUpdate = NOW() WHERE id = ?`,
+        [name, stock || 0, category, location, status, image, brand, id]
+      );
+      if (result.affectedRows === 0) return res.status(404).json({ error: 'Product not found' });
+      return res.json({ success: true });
+    } catch(e) {
+      const [result2] = await pool.query(
+        `UPDATE powerbanks SET name = ?, brand = ?, capacity = ?, price = ?, stock = ?, image = ? WHERE id = ?`,
+        [name, brand, capacity, price, stock, image, id]
+      );
+      if (result2.affectedRows === 0) return res.status(404).json({ error: 'Product not found' });
+      return res.json({ success: true });
+    }
+  } catch (err) {
+    console.error('Update Product Error:', err);
+    res.status(500).json({ error: 'Failed to update product: ' + (err.message || 'Unknown error') });
+  }
+});
+
 app.listen(port, '0.0.0.0', () => {
   console.log(`🚀 API running on port ${port}`);
 });

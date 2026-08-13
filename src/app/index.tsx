@@ -12,6 +12,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AddProductScreen from './add';
+import EditProductScreen from './edit';
 
 const { width } = Dimensions.get('window');
 
@@ -34,25 +36,27 @@ export default function ProductsScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
+  async function loadProducts() {
+    try {
+      setIsLoading(true);
+      setErrorMsg('');
+      const response = await fetch(PRODUCTS_URL);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setProducts(data);
+    } catch (error: any) {
+      console.error("Error fetching products:", error);
+      setErrorMsg(error.message || "Failed to load");
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   useEffect(() => {
-    async function loadProducts() {
-      try {
-        setIsLoading(true);
-        setErrorMsg('');
-        const response = await fetch(PRODUCTS_URL);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        setProducts(data);
-      } catch (error: any) {
-        console.error("Error fetching products:", error);
-        setErrorMsg(error.message || "Failed to load");
-      } finally {
-        setIsLoading(false);
-      }
-    }
     loadProducts();
   }, []);
 
@@ -60,85 +64,106 @@ export default function ProductsScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.iconButton}>
-          <Text style={styles.iconText}>☰</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Products</Text>
-        <TouchableOpacity style={styles.profileButton}>
-          <Text style={styles.profileIconText}>👤</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Search and Action Container */}
-      <View style={styles.actionContainer}>
-        {/* Search Bar */}
-        <View style={styles.searchWrapper}>
-          <View style={styles.searchBar}>
-            <Text style={styles.searchIcon}>🔍</Text>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search products..."
-              placeholderTextColor="#94A3B8"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
+      {/* Conditional Rendering */}
+      {activeTab === 'Add' ? (
+        <AddProductScreen 
+          onSuccess={() => { setActiveTab('Products'); loadProducts(); }} 
+          onCancel={() => setActiveTab('Products')} 
+        />
+      ) : activeTab === 'Edit' && editingProduct ? (
+        <EditProductScreen 
+          product={editingProduct as any} 
+          onSuccess={() => { setActiveTab('Products'); loadProducts(); setEditingProduct(null); }} 
+          onCancel={() => { setActiveTab('Products'); setEditingProduct(null); }} 
+        />
+      ) : (
+        <>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.iconButton}>
+              <Text style={styles.iconText}>☰</Text>
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>{activeTab}</Text>
+            <TouchableOpacity style={styles.profileButton}>
+              <Text style={styles.profileIconText}>👤</Text>
+            </TouchableOpacity>
           </View>
-        </View>
 
-        {/* Buttons */}
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.primaryButton}>
-            <Text style={styles.primaryButtonIcon}>+</Text>
-            <Text style={styles.primaryButtonText}>Add Product</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryButton}>
-            <Text style={styles.secondaryButtonText}>Filter</Text>
-            <Text style={styles.secondaryButtonIcon}>▼</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Product List */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.productList}>
-          {isLoading && <Text style={{ textAlign: 'center', marginTop: 20 }}>กำลังโหลดข้อมูล...</Text>}
-          {errorMsg ? <Text style={{ textAlign: 'center', color: 'red', marginTop: 20 }}>เกิดข้อผิดพลาด: {errorMsg}</Text> : null}
-          {!isLoading && !errorMsg && products.length === 0 && (
-            <Text style={{ textAlign: 'center', marginTop: 20 }}>ไม่พบสินค้า</Text>
-          )}
-
-          {products.map((product) => (
-            <View key={product.id} style={styles.productCard}>
-              <View style={styles.productImagePlaceholder}>
-                <Image
-                  source={{ uri: product.image }}
-                  style={styles.productImage}
-                  contentFit="cover"
-                  transition={1000}
+          {/* Search and Action Container */}
+          <View style={styles.actionContainer}>
+            {/* Search Bar */}
+            <View style={styles.searchWrapper}>
+              <View style={styles.searchBar}>
+                <Text style={styles.searchIcon}>🔍</Text>
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search products..."
+                  placeholderTextColor="#94A3B8"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
                 />
               </View>
-              <View style={styles.productInfo}>
-                <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
-                <Text style={styles.productCategory}>{product.brand || 'No Brand'} • {product.capacity ? `${product.capacity}mAh` : 'N/A'}</Text>
-                <View style={styles.productFooter}>
-                  <Text style={styles.productPrice}>{product.price ? `$${product.price}` : 'Free'}</Text>
-                  <View style={[styles.stockBadge, product.stock < 10 ? styles.stockLow : styles.stockNormal]}>
-                    <Text style={[styles.stockText, product.stock < 10 ? styles.stockTextLow : styles.stockTextNormal]}>
-                      {product.stock} left
-                    </Text>
+            </View>
+
+            {/* Buttons */}
+            <View style={styles.buttonRow}>
+              <TouchableOpacity style={styles.primaryButton} onPress={() => setActiveTab('Add')}>
+                <Text style={styles.primaryButtonIcon}>+</Text>
+                <Text style={styles.primaryButtonText}>Add Product</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.secondaryButton}>
+                <Text style={styles.secondaryButtonText}>Filter</Text>
+                <Text style={styles.secondaryButtonIcon}>▼</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Product List */}
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.productList}>
+              {isLoading && <Text style={{ textAlign: 'center', marginTop: 20 }}>กำลังโหลดข้อมูล...</Text>}
+              {errorMsg ? <Text style={{ textAlign: 'center', color: 'red', marginTop: 20 }}>เกิดข้อผิดพลาด: {errorMsg}</Text> : null}
+              {!isLoading && !errorMsg && products.length === 0 && (
+                <Text style={{ textAlign: 'center', marginTop: 20 }}>ไม่พบสินค้า</Text>
+              )}
+
+              {products.map((product) => (
+                <View key={product.id} style={styles.productCard}>
+                  <View style={styles.productImagePlaceholder}>
+                    <Image
+                      source={{ uri: product.image }}
+                      style={styles.productImage}
+                      contentFit="cover"
+                      transition={1000}
+                    />
+                  </View>
+                  <View style={styles.productInfo}>
+                    <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
+                    <Text style={styles.productCategory}>{product.brand || 'No Brand'} • {product.capacity ? `${product.capacity}mAh` : 'N/A'}</Text>
+                    <View style={styles.productFooter}>
+                      <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
+                        <Text style={styles.productPrice}>{product.price ? `$${product.price}` : 'Free'}</Text>
+                        <View style={[styles.stockBadge, product.stock < 10 ? styles.stockLow : styles.stockNormal]}>
+                          <Text style={[styles.stockText, product.stock < 10 ? styles.stockTextLow : styles.stockTextNormal]}>
+                            {product.stock} left
+                          </Text>
+                        </View>
+                      </View>
+                      <TouchableOpacity onPress={() => { setEditingProduct(product); setActiveTab('Edit'); }} style={styles.editButton}>
+                        <Text style={styles.editButtonText}>Edit</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </View>
-              </View>
+              ))}
             </View>
-          ))}
-        </View>
-      </ScrollView>
+          </ScrollView>
+        </>
+      )}
 
       {/* Bottom Navigation */}
       <View style={styles.bottomNavContainer}>
@@ -444,6 +469,17 @@ const styles = StyleSheet.create({
   },
   navTextActive: {
     color: '#4F46E5',
+    fontWeight: '700',
+  },
+  editButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#EEF2FF',
+    borderRadius: 8,
+  },
+  editButtonText: {
+    color: '#4F46E5',
+    fontSize: 12,
     fontWeight: '700',
   },
 });
