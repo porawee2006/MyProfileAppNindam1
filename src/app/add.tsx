@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
+import { useAuth } from './AuthContext';
 
 export type EditableProduct = {
   id?: number | string;
@@ -20,6 +21,9 @@ export type AddProductScreenProps = {
   onCancel?: () => void;
 };
 
+// ==========================================
+// 🖥️ [FRONTEND] 1. หน้าฟอร์มเพิ่มสินค้า & 3. แก้ไขสินค้า (ADD / EDIT FORM - TECH THEME)
+// ==========================================
 export default function AddProductScreen({
   existingCategories = [],
   product = null,
@@ -37,10 +41,12 @@ export default function AddProductScreen({
   const [image, setImage] = useState(product?.image ?? '');
   const [location, setLocation] = useState(product?.location_text ?? '');
   const [isLoading, setIsLoading] = useState(false);
+  const { token } = useAuth();
 
+  // 📝 ฟังก์ชันยิง API เพิ่ม/แก้ไขสินค้าไปยัง Backend
   const handleSubmit = async () => {
     if (!name) {
-      Alert.alert('Error', 'Name is required');
+      Alert.alert('ข้อผิดพลาด', 'กรุณากรอกชื่อสินค้า Powerbank');
       return;
     }
 
@@ -65,6 +71,7 @@ export default function AddProductScreen({
         method: isEditMode ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
         },
         body: JSON.stringify(payload),
       });
@@ -72,13 +79,12 @@ export default function AddProductScreen({
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to save product');
+        throw new Error(data.error || 'ไม่สามารถบันทึกข้อมูลสินค้าได้');
       }
 
-      Alert.alert('Success', isEditMode ? 'Product updated!' : `Product created! ID: ${data.productId}`);
+      Alert.alert('สำเร็จ', isEditMode ? 'อัปเดตข้อมูลสินค้าเรียบร้อยแล้ว!' : `เพิ่มสินค้าเรียบร้อยแล้ว! ID: ${data.productId}`);
       
       if (!isEditMode) {
-        // Reset form
         setName('');
         setStock('0');
         setCategory('');
@@ -91,7 +97,7 @@ export default function AddProductScreen({
 
       if (onSuccess) onSuccess();
     } catch (err: any) {
-      Alert.alert('Error', err.message);
+      Alert.alert('ข้อผิดพลาด', err.message);
     } finally {
       setIsLoading(false);
     }
@@ -99,57 +105,109 @@ export default function AddProductScreen({
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
+      {/* HEADER BAR */}
       <View style={styles.header}>
         {onCancel && (
-          <TouchableOpacity onPress={onCancel}>
-            <Text style={styles.cancelText}>← Back</Text>
+          <TouchableOpacity onPress={onCancel} style={styles.backButton}>
+            <Text style={styles.backButtonText}>← ย้อนกลับ</Text>
           </TouchableOpacity>
         )}
-        <Text style={styles.title}>{isEditMode ? 'Edit Product' : 'Add Product'}</Text>
+        <Text style={styles.title}>{isEditMode ? '✏️ แก้ไขข้อมูล Powerbank' : '➕ เพิ่มสินค้า Powerbank ใหม่'}</Text>
         <View style={{ width: 40 }} />
       </View>
 
-      <View style={styles.form}>
-        <Text style={styles.label}>Name *</Text>
-        <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Enter product name" />
+      {/* FORM CARD */}
+      <View style={styles.formCard}>
+        <Text style={styles.label}>ชื่อสินค้า Powerbank *</Text>
+        <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="เช่น Anker 20000mAh Fast Charge" placeholderTextColor="#64748B" />
 
-        <Text style={styles.label}>Category</Text>
-        <TextInput style={styles.input} value={category} onChangeText={setCategory} placeholder="Enter category" />
+        <View style={styles.row}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.label}>แบรนด์ (Brand)</Text>
+            <TextInput style={styles.input} value={brand} onChangeText={setBrand} placeholder="เช่น Anker, Eloop" placeholderTextColor="#64748B" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.label}>ความจุ (mAh)</Text>
+            <TextInput style={styles.input} value={capacity} onChangeText={setCapacity} placeholder="เช่น 20000" placeholderTextColor="#64748B" keyboardType="numeric" />
+          </View>
+        </View>
 
-        <Text style={styles.label}>Brand</Text>
-        <TextInput style={styles.input} value={brand} onChangeText={setBrand} placeholder="Enter brand" />
+        <View style={styles.row}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.label}>ราคา (บาท ฿)</Text>
+            <TextInput style={styles.input} value={price} onChangeText={setPrice} placeholder="เช่น 1290" placeholderTextColor="#64748B" keyboardType="numeric" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.label}>จำนวนสต็อก (ชิ้น)</Text>
+            <TextInput style={styles.input} value={stock} onChangeText={setStock} placeholder="เช่น 15" placeholderTextColor="#64748B" keyboardType="numeric" />
+          </View>
+        </View>
 
-        <Text style={styles.label}>Price</Text>
-        <TextInput style={styles.input} value={price} onChangeText={setPrice} placeholder="Enter price" keyboardType="numeric" />
+        <Text style={styles.label}>หมวดหมู่สินค้า (Category)</Text>
+        <TextInput style={styles.input} value={category} onChangeText={setCategory} placeholder="เช่น Fast Charge, Wireless" placeholderTextColor="#64748B" />
 
-        <Text style={styles.label}>Stock</Text>
-        <TextInput style={styles.input} value={stock} onChangeText={setStock} placeholder="Enter stock quantity" keyboardType="numeric" />
+        <Text style={styles.label}>URL รูปภาพสินค้า (Image URL)</Text>
+        <TextInput style={styles.input} value={image} onChangeText={setImage} placeholder="https://..." placeholderTextColor="#64748B" autoCapitalize="none" />
 
-        <Text style={styles.label}>Capacity</Text>
-        <TextInput style={styles.input} value={capacity} onChangeText={setCapacity} placeholder="Enter capacity (e.g. 10000)" keyboardType="numeric" />
+        <Text style={styles.label}>สถานที่จัดเก็บ / คลังสินค้า</Text>
+        <TextInput style={styles.input} value={location} onChangeText={setLocation} placeholder="เช่น Warehouse A" placeholderTextColor="#64748B" />
 
-        <Text style={styles.label}>Location</Text>
-        <TextInput style={styles.input} value={location} onChangeText={setLocation} placeholder="Enter location" />
-
-        <Text style={styles.label}>Image URL</Text>
-        <TextInput style={styles.input} value={image} onChangeText={setImage} placeholder="Enter image URL" autoCapitalize="none" />
-
+        {/* SUBMIT BUTTON */}
         <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={isLoading}>
-          <Text style={styles.buttonText}>{isLoading ? 'Saving...' : (isEditMode ? 'Update Product' : 'Add Product')}</Text>
+          <Text style={styles.buttonText}>{isLoading ? 'กำลังบันทึก...' : (isEditMode ? '💾 บันทึกการแก้ไข' : '⚡ เพิ่มสินค้าลงคลัง')}</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
   );
 }
 
+// 🎨 สไตล์ธีม Cyberpunk Tech สวยงามสำหรับหน้า Add/Edit
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20 },
-  cancelText: { fontSize: 16, color: '#4F46E5', fontWeight: '600' },
-  title: { fontSize: 20, fontWeight: 'bold', color: '#0F172A' },
-  form: { paddingHorizontal: 20 },
-  label: { fontSize: 14, fontWeight: '600', color: '#334155', marginBottom: 8, marginTop: 16 },
-  input: { borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12, padding: 16, fontSize: 16, backgroundColor: '#FFFFFF' },
-  button: { backgroundColor: '#4F46E5', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 32 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  container: { flex: 1, backgroundColor: '#0F172A' },
+  header: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E293B'
+  },
+  backButton: {
+    backgroundColor: '#1E293B',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  backButtonText: { fontSize: 13, color: '#06B6D4', fontWeight: '700' },
+  title: { fontSize: 18, fontWeight: '800', color: '#F8FAFC' },
+  formCard: { 
+    margin: 20,
+    padding: 20,
+    backgroundColor: '#1E293B',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#334155',
+    gap: 6,
+  },
+  row: { flexDirection: 'row', gap: 12 },
+  label: { fontSize: 13, fontWeight: '700', color: '#CBD5E1', marginBottom: 6, marginTop: 12 },
+  input: { 
+    backgroundColor: '#0F172A',
+    borderWidth: 1, 
+    borderColor: '#334155', 
+    borderRadius: 12, 
+    padding: 14, 
+    fontSize: 14, 
+    color: '#F8FAFC',
+  },
+  button: { 
+    backgroundColor: '#06B6D4', 
+    padding: 16, 
+    borderRadius: 12, 
+    alignItems: 'center', 
+    marginTop: 24 
+  },
+  buttonText: { color: '#0F172A', fontSize: 16, fontWeight: '900' },
 });
