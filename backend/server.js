@@ -41,7 +41,7 @@ const pool = mysql.createPool({
   try {
     const conn = await pool.getConnection();
     console.log('Connected to MySQL:', process.env.DB_NAME);
-    
+
     // Create users table if not exists
     await conn.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -61,6 +61,25 @@ const pool = mysql.createPool({
       console.log('Admin user seeded.');
     }
 
+    // Ensure powerbanks columns exist
+    const columnsToAdd = [
+      'ADD COLUMN capacity INT DEFAULT 0',
+      'ADD COLUMN price DECIMAL(10,2) DEFAULT 0',
+      'ADD COLUMN location VARCHAR(255)',
+      'ADD COLUMN category VARCHAR(255)',
+      'ADD COLUMN brand VARCHAR(255)',
+      'ADD COLUMN status VARCHAR(50) DEFAULT "Active"',
+      'ADD COLUMN image TEXT',
+      'ADD COLUMN lastUpdate TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    ];
+    for (const col of columnsToAdd) {
+      try {
+        await conn.query(`ALTER TABLE powerbanks ${col}`);
+      } catch (err) {
+        // Column likely already exists, ignore
+      }
+    }
+
     conn.release();
   } catch (err) {
     console.error('MySQL Failed:', err.message);
@@ -76,7 +95,7 @@ function requireAuth(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // ดึงคำว่า Bearer <Token>
   if (!token) return res.status(401).json({ error: 'Access Token Required' });
-  
+
   // ยืนยันความถูกต้องของ Token
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) return res.status(403).json({ error: 'Invalid Token' });
@@ -107,7 +126,7 @@ app.post('/api/auth/register', async (req, res) => {
     if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
 
     if (username.toLowerCase() === 'admin') {
-       return res.status(400).json({ error: 'Cannot register as admin' });
+      return res.status(400).json({ error: 'Cannot register as admin' });
     }
 
     const hashedPass = await bcrypt.hash(password, 10);
@@ -150,38 +169,38 @@ app.get('/api/products', async (req, res) => {
     const { q, minPrice, maxPrice, sort } = req.query;
     let query = 'SELECT * FROM powerbanks WHERE 1=1';
     let params = [];
-    
+
     // ค้นหาตามชื่อสินค้าหรือแบรนด์
     if (q) {
-       query += ' AND (name LIKE ? OR brand LIKE ?)';
-       params.push(`%${q}%`, `%${q}%`);
+      query += ' AND (name LIKE ? OR brand LIKE ?)';
+      params.push(`%${q}%`, `%${q}%`);
     }
 
     // กรองตามราคาน้อยที่สุด (Min Price)
     if (minPrice && !isNaN(minPrice)) {
-       query += ' AND price >= ?';
-       params.push(parseFloat(minPrice));
+      query += ' AND price >= ?';
+      params.push(parseFloat(minPrice));
     }
 
     // กรองตามราคามากที่สุด (Max Price)
     if (maxPrice && !isNaN(maxPrice)) {
-       query += ' AND price <= ?';
-       params.push(parseFloat(maxPrice));
+      query += ' AND price <= ?';
+      params.push(parseFloat(maxPrice));
     }
 
     // เรียงลำดับราคา (Price Low->High, High->Low, Newest)
     if (sort === 'price_asc') {
-       query += ' ORDER BY price ASC';
+      query += ' ORDER BY price ASC';
     } else if (sort === 'price_desc') {
-       query += ' ORDER BY price DESC';
+      query += ' ORDER BY price DESC';
     } else {
-       query += ' ORDER BY lastUpdate DESC';
+      query += ' ORDER BY lastUpdate DESC';
     }
 
     try {
       const [rows] = await pool.query(query, params);
       res.json(rows);
-    } catch(e) {
+    } catch (e) {
       // Fallback สำหรับตารางที่ไม่มีคอลัมน์ lastUpdate
       query = query.replace(' ORDER BY lastUpdate DESC', '');
       const [rows2] = await pool.query(query, params);
@@ -206,11 +225,11 @@ app.post('/api/products', requireAdmin, async (req, res) => {
     try {
       // First try the schema from the presentation
       const [rs] = await pool.query(
-        `INSERT INTO powerbanks (name, stock, category, location, image, status, brand, lastUpdate) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-        [name, stock || 0, category || null, location || null, image || null, status || 'Active', brand || null]
+        `INSERT INTO powerbanks (name, stock, category, location, image, status, brand, capacity, price, lastUpdate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [name, stock || 0, category || null, location || null, image || null, status || 'Active', brand || null, capacity, price]
       );
       return res.status(201).json({ success: true, productId: rs.insertId });
-    } catch(e) {
+    } catch (e) {
       // Fallback to powerbanks schema derived from index.tsx
       const [rs2] = await pool.query(
         `INSERT INTO powerbanks (name, brand, capacity, price, stock, image) VALUES (?, ?, ?, ?, ?, ?)`,
@@ -220,7 +239,7 @@ app.post('/api/products', requireAdmin, async (req, res) => {
     }
   } catch (err) {
     console.error('Create Product Error:', err);
-    res.status(500).json({ error: 'Failed to create product' });
+    res.status(500).json({ error: 'Failed to create product: ' + err.message });
   }
 });
 
@@ -236,13 +255,13 @@ app.put('/api/products/:id', requireAdmin, async (req, res) => {
     if (!name) return res.status(400).json({ error: 'Missing name' });
 
     try {
-       const [result] = await pool.query(
-        `UPDATE powerbanks SET name = ?, stock = ?, category = ?, location = ?, status = ?, image = ?, brand = ?, lastUpdate = NOW() WHERE id = ?`,
-        [name, stock || 0, category, location, status, image, brand, id]
+      const [result] = await pool.query(
+        `UPDATE powerbanks SET name = ?, stock = ?, category = ?, location = ?, status = ?, image = ?, brand = ?, capacity = ?, price = ?, lastUpdate = NOW() WHERE id = ?`,
+        [name, stock || 0, category, location, status, image, brand, capacity, price, id]
       );
       if (result.affectedRows === 0) return res.status(404).json({ error: 'Product not found' });
       return res.json({ success: true });
-    } catch(e) {
+    } catch (e) {
       const [result2] = await pool.query(
         `UPDATE powerbanks SET name = ?, brand = ?, capacity = ?, price = ?, stock = ?, image = ? WHERE id = ?`,
         [name, brand, capacity, price, stock, image, id]
@@ -261,15 +280,21 @@ app.put('/api/products/:id', requireAdmin, async (req, res) => {
 // ==========================================
 app.delete('/api/products/:id', requireAdmin, async (req, res) => {
   try {
+    // 1️ รับค่า id ของสินค้าที่ส่งมากับ URL (เช่น /api/products/5 ก็จะได้ 5)
     const { id } = req.params;
+
+    // 2️ สั่งรันคำสั่ง SQL เพื่อลบข้อมูลสินค้าตัวนั้นออกจากตาราง powerbanks ไปเลยยย
     const [result] = await pool.query('DELETE FROM powerbanks WHERE id = ?', [id]);
-    
+
+    // 3️ เช็คว่าลบสำเร็จไหม (affectedRows = จำนวนแถวที่ถูกลบ) ถ้าเป็น 0 แปลว่าหาสินค้าไม่เจอจ้า 
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Product not found' });
     }
-    
+
+    // 4️ ถ้าผ่านฉลุย ก็ส่งข้อความบอก Frontend ว่าลบเรียบร้อยแล้ว
     res.json({ success: true, message: 'Product deleted successfully' });
   } catch (err) {
+    // 5️ ดักจับ Error เผื่อระบบฐานข้อมูลมีปัญหา จะได้ไม่ทำเซิร์ฟเวอร์พัง แล้วฟ้องกลับไปว่า Error 
     console.error('Delete Product Error:', err);
     res.status(500).json({ error: 'Failed to delete product' });
   }

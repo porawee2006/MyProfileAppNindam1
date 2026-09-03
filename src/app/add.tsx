@@ -11,7 +11,7 @@ export type EditableProduct = {
   price?: number;
   stock: number;
   image?: string;
-  location_text?: string;
+  location?: string;
 };
 
 export type AddProductScreenProps = {
@@ -39,7 +39,7 @@ export default function AddProductScreen({
   const [price, setPrice] = useState(String(product?.price ?? 0));
   const [capacity, setCapacity] = useState(String(product?.capacity ?? 0));
   const [image, setImage] = useState(product?.image ?? '');
-  const [location, setLocation] = useState(product?.location_text ?? '');
+  const [location, setLocation] = useState(product?.location ?? '');
   const [isLoading, setIsLoading] = useState(false);
   const { token } = useAuth();
 
@@ -58,7 +58,7 @@ export default function AddProductScreen({
       price: parseFloat(price) || 0,
       capacity: parseInt(capacity) || 0,
       image,
-      location_text: location,
+      location,
     };
 
     try {
